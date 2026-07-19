@@ -39,7 +39,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-add_executable(EuropaRender main.cpp
+add_library(EuropaRender
         Src/Graphics/GameWindow.cpp
         Include/Graphics/GameWindow.h
         Include/Graphics/Game.h
@@ -60,8 +60,13 @@ add_executable(EuropaRender main.cpp
         Include/World/GameWorld.h
 )
 
+add_executable(EuropaTest main.cpp)
+
 target_precompile_headers(EuropaRender PUBLIC Include/pch.h)
+target_precompile_headers(EuropaTest PUBLIC Include/pch.h)
 
 target_include_directories(EuropaRender PUBLIC Include Include/Graphics Include/Graphics/ImGUI Include/GameObject Include/World)
 
 target_link_libraries(EuropaRender PRIVATE GLEW::GLEW glfw imgui_lib glm::glm nlohmann_json::nlohmann_json)
+
+target_link_libraries(EuropaTest EuropaRender GLEW::GLEW)
