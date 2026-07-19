@@ -34,8 +34,7 @@ nlohmann::json GameCamera::GetJson() {
 }
 
 void GameCamera::Action() {
-    this->position -= glm::vec3(0.0f,0.0f,0.0005f);
-    this->rotation -= glm::vec3(0.0f,0.0f,0.0005f);
+
 }
 void GameCamera::SetPosition(glm::vec3 _position) {
     this->position = _position;
