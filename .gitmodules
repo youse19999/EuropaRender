@@ -1,0 +1,3 @@
+[submodule "EuropaRender"]
+	path = EuropaRender
+	url = https://github.com/youse19999/EuropaRender.git
