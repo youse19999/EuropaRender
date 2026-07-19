@@ -23,6 +23,7 @@ public:
 
     void AddGameObject(GameObject* gameObject);
     void SetCamera(GameCamera* _camera);
+    GameCamera& GetCamera();
     void Update();
 
     void SetShaderProgram(unsigned int shaderProgram);

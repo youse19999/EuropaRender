@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "tiny_gltf.h"
 
 //OpenGLモジュールはGameWindowよりも先に呼び出さないといけない。
 #include "GameCamera.h"
@@ -9,7 +10,9 @@
 #include "GameImGUI.h"
 #include "GameWorld.h"
 #include "ImGUIExampleModule.h"
+#include "ImGUIGraphicsDebugger.h"
 #include "ImGUIRenderModule.h"
+#include "StbGraphicsTexture.h"
 /*
  *順番 これを守らないと壊れます。
  *ゲームウィンドウ作成
@@ -25,6 +28,7 @@
  *ゲームオブジェクトを追加
  *シェダープログラムをセット
  */
+
 int main() {
     //ウィンドウを作成
     GameWindow* gameWindow = new GameWindow();
@@ -40,6 +44,7 @@ int main() {
 
     //ImGUIの仮モジュール
     ImGUIExampleModule* module = new ImGUIExampleModule();
+    ImGUIGraphicsDebugger* graphicsDebuger = new ImGUIGraphicsDebugger();
     //OpenGLモジュール
     gameWindow->AddModule(openGLModule);
     gameWindow->AddModule(world);
@@ -47,6 +52,14 @@ int main() {
     gameWindow->AddModule(imgui);
     //imguiモジュールにテスト用モジュールを追加
     imgui->AddImGUIModule(module);
+    imgui->AddImGUIModule(graphicsDebuger);
+
+    graphicsDebuger->SetGraphcis(openGLModule);
+    graphicsDebuger->SetWorld(world);
+
+    StbGraphicsTexture* texture = new StbGraphicsTexture();
+    texture->SetTexture("image.png");
+    texture->BindTexture();
 
     //カメラを作成
     GameCamera* camera = new GameCamera();
@@ -56,8 +69,13 @@ int main() {
     world->AddGameObject(camera);
 
     GameCamera* gameObject = new GameCamera();
+    gameObject->SetTexture(texture);
+    gameObject->LoadMeshes("mesh.glb");
+    camera->SetTexture(texture);
+    world->AddGameObject(gameObject);
 
     openGLModule->AddVertices(0,gameObject->GetMeshes());
+    openGLModule->AddIndices(gameObject->GetIndices());
 
     //モジュールを初期化
     gameWindow->InitModule();

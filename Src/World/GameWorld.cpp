@@ -4,6 +4,7 @@
 
 #include "GameWorld.h"
 
+#include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
 void GameWorld::AddGameObject(GameObject* gameObject)  {
@@ -26,7 +27,9 @@ void GameWorld::SetShaderProgram(unsigned int _shaderProgram) {
 
 GameWorld::GameWorld(GLFWwindow* window) : GameRenderModule(window) {
 }
-
+/*
+ *継承した結果です。
+ */
 void GameWorld::Dispose() {
 
 }
@@ -37,8 +40,46 @@ void GameWorld::Init() {
 
 }
 void GameWorld::Render() {
+    /*
+    Viewはビュー行列
+    Projectionはカメラ行列です。
+    Modelは、オブジェクトが個別に持ちます。
+    */
+
+    //Viewのシェダー部分を送信します。
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+    //ここで、glm側のポインタを受け取り、viewLocのLocationに送信します。
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(curentCamera->GetViewMatrix()));
+    //同様にProjectionを送信しています。
     GLint proejctionLoc = glGetUniformLocation(shaderProgram, "projection");
     glUniformMatrix4fv(proejctionLoc, 1, GL_FALSE, glm::value_ptr(curentCamera->GetProjectionMatrix()));
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+    //ゲームのオブジェクトリストを保存します。
+
+    /*
+     *ここで、オフセットを変更しながら描画処理を回すことで、描画を分けます。
+    */
+
+    for (auto gameObject : gameObjects) {
+        //TODO GetTextureの処理が完了しておらず、Textureがないとクラッシュする。
+        if (gameObject->GetTexture() != nullptr) {
+            //TODO:texture1の名前をまともにする。
+            GLint textureUniformLocation = glGetUniformLocation(shaderProgram, "texture1");
+            //テクスチャを送信する。
+            glUniform1i(textureUniformLocation, 0);
+            //テクスチャをアクティブにする。
+            glActiveTexture(GL_TEXTURE0);
+            //テクスチャを割り当てる。
+            glBindTexture(GL_TEXTURE_2D, gameObject->GetTexture()->GetTextureID());
+            //モデル
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(gameObject->GetModelMatrix()));
+            //描画処理
+            glDrawElements(GL_TRIANGLES, gameObject->GetMeshes().size(), GL_UNSIGNED_INT,0);
+            //glDrawArrays(GL_TRIANGLES, 0, gameObject->GetMeshes().size());
+        }
+    }
+}
+
+GameCamera& GameWorld::GetCamera() {
+    return *this->curentCamera;
 }

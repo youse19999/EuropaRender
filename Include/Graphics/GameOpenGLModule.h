@@ -13,21 +13,23 @@
 #include <map>
 
 #include "ImGUIRenderModule.h"
+#include "Vertex.h"
 
 class GameOpenGLModule:public GameRenderModule {
 private:
-    std::vector<glm::vec3> resultVertices;
+    unsigned int vertexCount = 0;
+
+    std::vector<Vertex> resultVertices;
+    std::vector<unsigned int> resultIndices;
     //ゲームのオブジェクト用
-    std::map<unsigned int,std::vector<glm::vec3>> vertices = std::map<unsigned int,std::vector<glm::vec3>>();
+    std::vector<std::vector<Vertex>> vertices = std::vector<std::vector<Vertex>>();
 
     bool initialized = false;
 
-    unsigned int VAO, VBO;
+    unsigned int VAO, VBO,EBO;
     unsigned int vertexShader;
     unsigned int fragmentShader;
     unsigned int shaderProgram;
-
-
 
     std::vector<ImGUIRenderModule*> imguiModules;
 public:
@@ -37,7 +39,8 @@ public:
     void Init() override;
     void Render() override;
 
-    void AddVertices(unsigned int object, std::vector<glm::vec3> vertices);
+    void AddVertices(unsigned int object, std::vector<Vertex> vertices);
+    void AddIndices(std::vector<unsigned int> _indices);
 
     unsigned int GetShaderProgram();
 };
