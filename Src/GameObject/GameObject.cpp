@@ -1,11 +1,16 @@
+/*
+ *
+ */
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Game.h"
+#include "GameWorld.h"
 #include "mat42str.h"
 //
 // Created by youse on 2026/07/19.
 //
 unsigned int lastIndexPosition;
+unsigned int gameObjectLastOffset;
 
 #include <GameObject.h>
 #include <iostream>
@@ -46,8 +51,11 @@ glm::mat4 GameObject::GetModelMatrix() {
     return model;
 }
 
-void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf::Skin* skin,tinygltf::Animation* animation) {
+void GameObject::SetParent(GameObject *obj) {
+    this->parent = obj;
+}
 
+void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf::Skin* skin) {
     std::vector<int> indices;
     std::vector<glm::vec3> position;
     std::vector<glm::vec3> normals;
@@ -149,11 +157,12 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                     indices.push_back(index+lastIndexPosition);
                 }
             }
-            int accessorIndex = posIt->second;
+            auto uvIt = primitive.attributes.find("TEXCOORD_0");
+            int accessorIndex = uvIt->second;
             const tinygltf::Accessor& accessor = model.accessors[accessorIndex];
             const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
             const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
-            if (accessor.type != TINYGLTF_TYPE_VEC2) {
+            if (accessor.type == TINYGLTF_TYPE_VEC2) {
                 const unsigned char* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
                 size_t byteStride = accessor.ByteStride(bufferView);
                 nlohmann::json uvJson;
@@ -163,7 +172,7 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                         const float* uv = reinterpret_cast<const float*>(dataPtr + (i * byteStride));
                         float u = uv[0];
                         float v = uv[1];
-                        uvs.push_back(glm::vec2(v,u));
+                        uvs.push_back(glm::vec2(u,v));
                     }
                     else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
                         // 正規化された（Normalized）値として格納されているケース
@@ -172,7 +181,7 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                         float v = accessor.normalized ? (uv[1] / 255.0f) : static_cast<float>(uv[1]);
                         vertex.UV.x = u;
                         vertex.UV.y = v;
-                        uvs.push_back(glm::vec2(v,u));
+                        uvs.push_back(glm::vec2(u,v));
                     }
                     else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
                         const unsigned short* uv = reinterpret_cast<const unsigned short*>(dataPtr + (i * byteStride));
@@ -180,7 +189,7 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                         float v = accessor.normalized ? (uv[1] / 65535.0f) : static_cast<float>(uv[1]);
                         vertex.UV.x = u;
                         vertex.UV.y = v;
-                        uvs.push_back(glm::vec2(v,u));
+                        uvs.push_back(glm::vec2(u,v));
                     }
                 }
             }
@@ -202,25 +211,29 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                     const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
                     const uint8_t* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
-                    size_t stride = accessor.ByteStride(bufferView); // 要素ごとのバイト幅
+
+                    size_t componentSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+                    size_t typeCount = tinygltf::GetNumComponentsInType(accessor.type); // VEC4なら 4
+                    size_t defaultStride = componentSize * typeCount;
+
+                    size_t byteStride = accessor.ByteStride(bufferView);
+                    size_t stride = (byteStride > 0) ? byteStride : defaultStride;
 
                     for (size_t i = 0; i < accessor.count; ++i) {
+                        const uint8_t* elementPtr = dataPtr + (i * stride);
                         std::stringstream jointSSteam;
                         // 型に応じたキャストが必要 (VEC4 として扱う)
                         // 例: uint16_t[4] または uint8_t[4]
                         //uint16_t
                         if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                            const uint16_t* joint = reinterpret_cast<const uint16_t*>(dataPtr + (i * stride));
-                            glm::vec4 jointData = glm::vec4(joint[0],joint[1],joint[2],joint[3]);
+                            const uint16_t* joint = reinterpret_cast<const uint16_t*>(elementPtr);
+                            glm::vec4 jointData = glm::vec4(joint[0], joint[1], joint[2], joint[3]);
                             joints.push_back(jointData);
                         }
                         //uint8_t
                         if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
-                            const uint8_t* joint = reinterpret_cast<const uint8_t*>(dataPtr + (i * stride));
-                            //jointSSteam << static_cast<int>(joint[0]) << "|" << static_cast<int>(joint[1]) << "|" << static_cast<int>(joint[2]) << "|" << static_cast<int>(joint[3]) << "|";
-                            //std::cout << jointSSteam.str() << std::endl;
-                            //LOG(jointSSteam.str());
-                            glm::vec4 jointData = glm::vec4(joint[0],joint[1],joint[2],joint[3]);
+                            const uint8_t* joint = elementPtr;
+                            glm::vec4 jointData = glm::vec4(joint[0], joint[1], joint[2], joint[3]);
                             joints.push_back(jointData);
                         }
                     }
@@ -269,68 +282,100 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
     if (skin != nullptr) {
         LOG("---SKIN---");
         if (skin != nullptr) {
-            //クラッシュ
             for (auto index : skin->joints) {
                 jointsNode.push_back(model.nodes[index]);
+                jointsNodeIndices.push_back(index);
             }
             if (skin->inverseBindMatrices >= 0) {
                 const tinygltf::Accessor& accessor = model.accessors[skin->inverseBindMatrices];
                 const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
                 const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
-                const float* matrixData = reinterpret_cast<const float*>(
-                    &(buffer.data[bufferView.byteOffset + accessor.byteOffset])
-                );
+                const size_t byteStride = accessor.ByteStride(bufferView) ? accessor.ByteStride(bufferView) : sizeof(glm::mat4);
+
+                const uint8_t* basePtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+
                 //glm::mat4に直接入れる。
                 for (size_t i = 0; i < accessor.count; ++i) {
-                    const float* matPtr = matrixData + (i * 16);
+                    const float* matPtr = reinterpret_cast<const float*>(basePtr + (i * byteStride));
                     glm::mat4 matrixVec4Data = glm::make_mat4(matPtr);
                     jointMatrix.push_back(matrixVec4Data);
                 }
             }
         }
     }
+}
+void GameObject::ProcessAnimation(tinygltf::Model model,tinygltf::Animation* animation) {
+    //TODO:毎回呼び出されるため分離しないろいけない。
     if (animation != nullptr) {
-    for (const auto& channel : animation->channels) {
-        int targetNode = channel.target_node;
-        std::string path = channel.target_path;
+        for (const auto& channel : animation->channels) {
+            int targetNode = channel.target_node;
+            const std::string& path = channel.target_path;
 
-        const auto& sampler = animation->samplers[channel.sampler];
-        std::string interpolation = sampler.interpolation;
+            const auto& sampler = animation->samplers[channel.sampler];
+            const std::string& interpolation = sampler.interpolation;
 
-        const tinygltf::Accessor& inputAccessor = model.accessors[sampler.input];
-        const tinygltf::BufferView& inputBufferView = model.bufferViews[inputAccessor.bufferView];
-        const tinygltf::Buffer& inputBuffer = model.buffers[inputBufferView.buffer];
+            // --- Input (Time) Accessor ---
+            const tinygltf::Accessor& inputAccessor = model.accessors[sampler.input];
+            const tinygltf::BufferView& inputBufferView = model.bufferViews[inputAccessor.bufferView];
+            const tinygltf::Buffer& inputBuffer = model.buffers[inputBufferView.buffer];
 
-        const float* times = reinterpret_cast<const float*>(
-                &inputBuffer.data[inputBufferView.byteOffset + inputAccessor.byteOffset]
-        );
-        const tinygltf::Accessor& outputAccessor = model.accessors[sampler.output];
-        const tinygltf::BufferView& outputBufferView = model.bufferViews[outputAccessor.bufferView];
-        const tinygltf::Buffer& outputBuffer = model.buffers[outputBufferView.buffer];
+            const unsigned char* inputDataPtr = &inputBuffer.data[inputBufferView.byteOffset + inputAccessor.byteOffset];
+            size_t inputStride = inputAccessor.ByteStride(inputBufferView);
 
-        const float* values = reinterpret_cast<const float*>(
-            &outputBuffer.data[outputBufferView.byteOffset + outputAccessor.byteOffset]
-        );
+            // --- Output (Value) Accessor ---
+            const tinygltf::Accessor& outputAccessor = model.accessors[sampler.output];
+            const tinygltf::BufferView& outputBufferView = model.bufferViews[outputAccessor.bufferView];
+            const tinygltf::Buffer& outputBuffer = model.buffers[outputBufferView.buffer];
 
-        std::cout << "  Target Node: " << targetNode << " | Path: " << path << std::endl;
+            const unsigned char* outputDataPtr = &outputBuffer.data[outputBufferView.byteOffset + outputAccessor.byteOffset];
+            size_t outputStride = outputAccessor.ByteStride(outputBufferView);
 
-        for (size_t i = 0; i < inputAccessor.count; ++i) {
-            float time = times[i];
-
-            if (path == "translation" || path == "scale") {
-                float x = values[i * 3 + 0];
-                float y = values[i * 3 + 1];
-                float z = values[i * 3 + 2];
+            GameObject* obj = GameWorld::GetInstance().get()->GetGameObject(targetNode);
+            if (obj == nullptr) {
+                continue;
             }
-            else if (path == "rotation") {
-                float x = values[i * 4 + 0];
-                float y = values[i * 4 + 1];
-                float z = values[i * 4 + 2];
-                float w = values[i * 4 + 3];
+
+            // 例：各キーフレームのデータを安全に取得する処理
+            for (size_t i = 0; i < inputAccessor.count; ++i) {
+                // ストライドを考慮してTimeを取得
+                const float time = *reinterpret_cast<const float*>(inputDataPtr + i * inputStride);
+
+                // ストライドを考慮してValueの先頭ポインタを取得
+                const float* valPtr = reinterpret_cast<const float*>(outputDataPtr + i * outputStride);
+
+                // CUBICSPLINE補間の場合はインデックスのオフセット（inTangentのスキップ）が必要
+                size_t valueOffset = 0;
+                if (interpolation == "CUBICSPLINE") {
+                    // 要素数 (translation/scale: 3, rotation: 4) 分の inTangent をスキップ
+                    size_t numComponents = (path == "rotation") ? 4 : 3;
+                    valueOffset = numComponents;
+                }
+
+                if (path == "translation") {
+                    const float x = valPtr[valueOffset + 0];
+                    const float y = valPtr[valueOffset + 1];
+                    const float z = valPtr[valueOffset + 2];
+
+                    // NOTE: アニメーション処理としては、ここで直接SetPositionするのではなく
+                    // 時間(time)に応じた補間処理を行うか、クリップデータとして保持するのが一般的です。
+                    obj->SetPosition(glm::vec3(x, y, z));
+                }
+                else if (path == "scale") {
+                    const float x = valPtr[valueOffset + 0];
+                    const float y = valPtr[valueOffset + 1];
+                    const float z = valPtr[valueOffset + 2];
+                    obj->SetScale(glm::vec3(x, y, z));
+                }
+                else if (path == "rotation") {
+                    const float x = valPtr[valueOffset + 0];
+                    const float y = valPtr[valueOffset + 1];
+                    const float z = valPtr[valueOffset + 2];
+                    const float w = valPtr[valueOffset + 3];
+                    obj->SetRotation(glm::quat(w, x, y, z)); // ※使用する数学ライブラリのQuat引数順序(w,x,y,z か x,y,z,w か)に依存
+                }
             }
         }
-    }
     }
 }
 
@@ -341,7 +386,51 @@ std::vector<glm::mat4> GameObject::GetJointMatrix() {
 std::vector<tinygltf::Node> GameObject::GetJoints() {
     return jointsNode;
 }
+std::vector<unsigned int> GameObject::GetJointsIndices() {
+    return jointsNodeIndices;
+}
+void GameObject::SetPosition(glm::vec3 _position) {
+    this->position = _position;
+}
+glm::vec3& GameObject::GetPosition() {
+    return this->position;
+}
+void GameObject::SetRotation(glm::quat _rotation) {
+    this->rotation = _rotation;
+}
+glm::quat& GameObject::GetRotation() {
+    return this->rotation;
+}
+void GameObject::SetScale(glm::vec3 _scale) {
+    this->scale = _scale;
+}
+glm::vec3& GameObject::GetScale() {
+    return this->scale;
+}
 
+void GameObject::SetID(int _id) {
+    this->id = gameObjectLastOffset + _id;
+}
+
+int GameObject::GetID() {
+    return this->id;
+}
+
+std::string GameObject::GetName() {
+    return this->name;
+}
+
+void GameObject::SetName(std::string _name) {
+    this->name = _name;
+}
+
+GameObject *GameObject::GetParent() {
+    return this->parent;
+}
+
+GameObject::GameObject() {
+
+}
 GameObject::~GameObject() {
 
 }

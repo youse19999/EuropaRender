@@ -8,15 +8,13 @@
 #include <GameObject.h>
 class GameCamera : public GameObject {
 public:
+
     GameCamera();
 
     void Action() override;
-    glm::vec3& GetPosition();
 
     glm::mat4 GetViewMatrix();
     glm::mat4 GetProjectionMatrix();
-    void SetPosition(glm::vec3 _position);
-    void SetRotation(glm::vec3 _rotation);
     nlohmann::json GetJson() override;
 };
 

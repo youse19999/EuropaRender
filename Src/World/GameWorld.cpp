@@ -5,9 +5,14 @@
 #include "GameWorld.h"
 
 #include <imgui.h>
+#include <iostream>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "logger.h"
+#include "mat42str.h"
+
+std::shared_ptr<GameWorld> GameWorld::instance{nullptr};
+std::mutex GameWorld::m_singleton;
 
 void GameWorld::AddGameObject(GameObject* gameObject)  {
     gameObjects.push_back(gameObject);
@@ -28,6 +33,9 @@ void GameWorld::SetShaderProgram(unsigned int _shaderProgram) {
 }
 
 GameWorld::GameWorld(GLFWwindow* window) : GameRenderModule(window) {
+    gameObjectOffset = gameObjectLastOffset;
+    std::shared_ptr<GameWorld> instance1(this);
+    this->instance.swap(instance1);
 }
 /*
  *継承した結果です。
@@ -40,6 +48,22 @@ void GameWorld::PollEvent() {
 }
 void GameWorld::Init() {
 
+}
+
+glm::mat4 CalculateNodeModelMatrix(GameObject* obj) {
+    // 自身のローカルTRS行列を作成
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), obj->GetPosition());
+    glm::mat4 R = glm::mat4_cast(obj->GetRotation());
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), obj->GetScale());
+    glm::mat4 localMatrix = T * R * S;
+
+    // ルートまで親を遡って行列を累積計算する
+
+    GameObject* parent = obj->GetParent();
+    if (parent != nullptr) {
+        return CalculateNodeModelMatrix(parent) * localMatrix;
+    }
+    return localMatrix;
 }
 void GameWorld::Render() {
     /*
@@ -78,42 +102,54 @@ void GameWorld::Render() {
             LOG_RENDER(":( Texture is null" << this);
             LOG_RENDER(":( Texture at " << gameObject->GetTexture());
         }
-        std::vector<glm::mat4> jointMatrix = gameObject->GetJointMatrix();
+        std::vector<glm::mat4> inverseBindMatrix = gameObject->GetJointMatrix();
+        std::vector<glm::mat4> jointMatrix;
+
+        // スキニング用のジョイント行列計算部
         int i = 0;
-        //TODO:これは機能しているが、RIGではないため、バグる。
-        for (auto node : gameObject->GetJoints()) {
-            glm::mat4 T = glm::translate(glm::mat4(1.0f), glm::vec3(node.translation[0],node.translation[1],node.translation[2]));
-            glm::mat4 R;
-            if (node.rotation.size() != 0) {
-                R = glm::toMat4(glm::quat(node.rotation[0],node.rotation[1],node.rotation[2],node.rotation[3]));
-            }else {
-                R = glm::toMat4(glm::quat(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)));
-            }
-            glm::mat4 S;
-            if (node.scale.size() != 0) {
-                S = glm::scale(glm::mat4(1.0f), glm::vec3(node.scale[0],node.scale[1],node.scale[2]));
-            }else {
-                S = glm::scale(glm::mat4(1.0f), glm::vec3(1,1,1));
-            }
-
-            glm::mat4 model = glm::mat4(1.0f) * T * R * S;
-
-            jointMatrix[i] = model * jointMatrix[i];
+        glm::mat4 invMeshModelMatrix = glm::inverse(gameObject->GetModelMatrix());
+        for (auto index : gameObject->GetJointsIndices()) {
+            auto obj = GameWorld::GetInstance()->GetGameObject(index);
+            // 1. ルートからの累積モデル行列を取得
+            glm::mat4 nodeWorldMatrix = CalculateNodeModelMatrix(obj);
+            glm::mat4 nodeModelMatrix = invMeshModelMatrix * nodeWorldMatrix;
+            // 2. ジョイント行列の計算（モデル空間行列 × インバースバインド行列）
+            jointMatrix.push_back(nodeModelMatrix * inverseBindMatrix[i]);
             i = i + 1;
         }
+
         glUniformMatrix4fv(jointMatrixLoc, static_cast<GLsizei>(jointMatrix.size()), GL_FALSE, glm::value_ptr(jointMatrix[0]));
 
-        LOG_RENDER("JOINT MATRIX SIZE:" << gameObject->GetJointMatrix().size());
+        //LOG_RENDER("JOINT MATRIX SIZE:" << gameObject->GetJointMatrix().size());
         //モデル
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(gameObject->GetModelMatrix()));
         //描画処理
         LOG_RENDER("DRAW ARRA COUNT : "<< gameObject->GetIndices().size());
         glDrawElements(GL_TRIANGLES, gameObject->GetIndices().size(), GL_UNSIGNED_INT,(const void*)(currentIndexOffset * sizeof(GLuint)));
         currentIndexOffset += gameObject->GetIndices().size();
-        //glDrawArrays(GL_TRIANGLES, 0, gameObject->GetMeshes().size());
     }
+}
+
+
+GameObject *GameWorld::GetGameObject(unsigned int index) {
+    GameObject* returnObject = nullptr;
+    for (auto obj : gameObjects) {
+        if (obj->GetID() == index) {
+            return obj;
+        }
+    }
+    return returnObject;
+}
+
+std::vector<GameObject *> GameWorld::GetAllGameObject() {
+    return gameObjects;
 }
 
 GameCamera& GameWorld::GetCamera() {
     return *this->curentCamera;
+}
+std::shared_ptr<GameWorld> GameWorld::GetInstance()
+{
+    std::lock_guard<std::mutex> lock(m_singleton);
+    return instance;
 }

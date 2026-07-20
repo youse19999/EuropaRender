@@ -108,6 +108,7 @@ int main() {
         LOG( err << std::endl);
     }
     LOG("---GLTF NODES---");
+    unsigned int objectSum = 0;
     //ノード回帰
     for (int i = 0;i<model.nodes.size();i++) {
         //ノードの実体の取得
@@ -128,6 +129,8 @@ int main() {
         GameCamera* gameObject = new GameCamera();
         gameObject->SetTexture(texture);
         gameObject->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+        gameObject->SetID(i);
+        gameObject->SetName(node.name);
         tinygltf::Animation* animation = nullptr;
         tinygltf::Skin* skin = nullptr;
         tinygltf::Mesh* mesh = nullptr;
@@ -137,19 +140,22 @@ int main() {
         if (node.skin < model.skins.size()) {
             skin = &model.skins[node.skin];
         }
-        if (1 < model.animations.size()) {
-            animation = nullptr;
-        }else {
-            animation = &model.animations[0];
-        }
-        gameObject->LoadMeshes(model,mesh,skin,animation);
+        gameObject->LoadMeshes(model,mesh,skin);
         LOG(logName<<"ADD OBJ TO WORLD");
         world->AddGameObject(gameObject);
         LOG(logName<<"ADD VERTICES");
         openGLModule->AddVertices(0,gameObject->GetMeshes());
         LOG(logName<<"ADD INDICES");
         openGLModule->AddIndices(gameObject->GetIndices());
+        if (isChild) {
+            for (auto parent : node.children) {
+                GameWorld::GetInstance().get()->GetGameObject(parent)->SetParent(gameObject);
+            }
+        }
+        objectSum++;
     }
+    GameWorld::GetInstance().get()->GetGameObject(0)->ProcessAnimation(model,&model.animations[0]);
+    gameObjectLastOffset += objectSum;
     LOG("---GLTF NODES---");
     //const tinygltf::Mesh mesh
 
