@@ -1,6 +1,7 @@
 //
 // Created by youse on 2026/07/19.
 //
+unsigned int lastIndexPosition;
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -29,8 +30,13 @@ VirtualTexture* GameObject::GetTexture() {
     return texture;
 }
 
+bool GameObject::GetTextureHasLoaded() {
+    return textureHasLoaded;
+}
+
 void GameObject::SetTexture(VirtualTexture* texture) {
     this->texture = texture;
+    textureHasLoaded = true;
 }
 
 glm::mat4 GameObject::GetModelMatrix() {
@@ -139,7 +145,7 @@ void GameObject::LoadMeshes(std::string path) {
                         index = reinterpret_cast<const uint8_t*>(dataPtr)[i];
                     }
                     // 得られたインデックスの処理
-                    indices.push_back(index);
+                    indices.push_back(index+lastIndexPosition);
                 }
             }
             int accessorIndex = posIt->second;
@@ -178,7 +184,7 @@ void GameObject::LoadMeshes(std::string path) {
                 }
             }
         }
-        LOG("---INPUT RESULT---\n" << "POSITION SIZE:" << position.size() << "\nNORMAL SIZE" << normals.size() <<  "\nUV SIZES" << uvs.size() << "\n---INPUT RESULT---" << std::endl);
+        LOG("---INPUT RESULT---\n" << "POSITION SIZE:" << position.size() << "\nNORMAL SIZE" << normals.size() <<  "\nUV SIZES" << uvs.size() << "\nLastIndexPosition:" << lastIndexPosition << "\n---INPUT RESULT---" << std::endl);
         for (int i = 0;i<position.size();i++) {
             Vertex vertex;
             vertex.Position = position[i];
@@ -187,6 +193,8 @@ void GameObject::LoadMeshes(std::string path) {
             vertices.push_back(vertex);
         }
         this->indices.insert(this->indices.end(),indices.begin(),indices.end());
+
+        lastIndexPosition+=this->vertices.size();
     }
 }
 

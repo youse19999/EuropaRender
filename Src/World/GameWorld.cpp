@@ -7,6 +7,8 @@
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "logger.h"
+
 void GameWorld::AddGameObject(GameObject* gameObject)  {
     gameObjects.push_back(gameObject);
 }
@@ -59,11 +61,10 @@ void GameWorld::Render() {
     /*
      *ここで、オフセットを変更しながら描画処理を回すことで、描画を分けます。
     */
-
+    currentIndexOffset = 0;
     for (auto gameObject : gameObjects) {
-        //TODO GetTextureの処理が完了しておらず、Textureがないとクラッシュする。
-        if (gameObject->GetTexture() != nullptr) {
-            //TODO:texture1の名前をまともにする。
+        //TODO:texture1の名前をまともにする。
+        if (gameObject->GetTextureHasLoaded()) {
             GLint textureUniformLocation = glGetUniformLocation(shaderProgram, "texture1");
             //テクスチャを送信する。
             glUniform1i(textureUniformLocation, 0);
@@ -71,12 +72,18 @@ void GameWorld::Render() {
             glActiveTexture(GL_TEXTURE0);
             //テクスチャを割り当てる。
             glBindTexture(GL_TEXTURE_2D, gameObject->GetTexture()->GetTextureID());
-            //モデル
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(gameObject->GetModelMatrix()));
-            //描画処理
-            glDrawElements(GL_TRIANGLES, gameObject->GetMeshes().size(), GL_UNSIGNED_INT,0);
-            //glDrawArrays(GL_TRIANGLES, 0, gameObject->GetMeshes().size());
+            LOG_RENDER(this << ">>MOCK LOG " << gameObject->GetTexture()->GetTextureID());
+        }else {
+            LOG_RENDER(":( Texture is null" << this);
+            LOG_RENDER(":( Texture at " << gameObject->GetTexture());
         }
+        //モデル
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(gameObject->GetModelMatrix()));
+        //描画処理
+        LOG_RENDER("DRAW ARRA COUNT : "<< gameObject->GetIndices().size());
+        glDrawElements(GL_TRIANGLES, gameObject->GetIndices().size(), GL_UNSIGNED_INT,(const void*)(currentIndexOffset * sizeof(GLuint)));
+        currentIndexOffset += gameObject->GetIndices().size();
+        //glDrawArrays(GL_TRIANGLES, 0, gameObject->GetMeshes().size());
     }
 }
 

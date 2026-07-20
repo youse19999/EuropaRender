@@ -12,6 +12,7 @@
 #include "ImGUIExampleModule.h"
 #include "ImGUIGraphicsDebugger.h"
 #include "ImGUIRenderModule.h"
+#include "logger.h"
 #include "StbGraphicsTexture.h"
 /*
  *順番 これを守らないと壊れます。
@@ -29,59 +30,93 @@
  *シェダープログラムをセット
  */
 
+//ログ機能を使う場合必須。
+std::stringstream LOGGER_STREAM;
+
 int main() {
+
+    std::string logName = "[CORE]";
+
+    LOG(logName<<"MAIN ENTRY");
     //ウィンドウを作成
     GameWindow* gameWindow = new GameWindow();
     //ウィンドウの作成処理を実行
     gameWindow->Create();
+    LOG(logName<<"GAME WINDOW CREATED");
 
     //ゲーム世界
     GameWorld* world = new GameWorld(gameWindow->GetWindow());
+    LOG(logName<<"GAME WORLD CREATED");
     //OpenGLのモジュール
     GameOpenGLModule* openGLModule = new GameOpenGLModule(gameWindow->GetWindow());
+    LOG(logName<<"OPENGL MODULE CREATED");
     //ImGUIのメインモジュール
     GameImGUI* imgui = new GameImGUI(gameWindow->GetWindow());
+    LOG(logName<<"IMGUI MODULE CREATED");
 
+    LOG(logName<<"DBG MODULE LOADING");
     //ImGUIの仮モジュール
     ImGUIExampleModule* module = new ImGUIExampleModule();
     ImGUIGraphicsDebugger* graphicsDebuger = new ImGUIGraphicsDebugger();
     //OpenGLモジュール
     gameWindow->AddModule(openGLModule);
     gameWindow->AddModule(world);
+    LOG(logName<<"CREATED");
     //imguiのモジュールを追加
     gameWindow->AddModule(imgui);
+    LOG(logName<<"IMGUI MODULE ADD DONE");
     //imguiモジュールにテスト用モジュールを追加
+
+    LOG(logName<<"ADDING IMGUI MODULE");
     imgui->AddImGUIModule(module);
     imgui->AddImGUIModule(graphicsDebuger);
 
     graphicsDebuger->SetGraphcis(openGLModule);
     graphicsDebuger->SetWorld(world);
+    LOG(logName<<"ADDING IMGUI MODULE DONE");
 
+    LOG(logName<<"SET TEXTURE");
     StbGraphicsTexture* texture = new StbGraphicsTexture();
     texture->SetTexture("image.png");
     texture->BindTexture();
 
+    LOG(logName<<"SET CAMERA");
     //カメラを作成
     GameCamera* camera = new GameCamera();
     //カメラを設定
     world->SetCamera(camera);
+    LOG(logName<<"ADD CAMERA TO WORLD");
     //カメラを追加
     world->AddGameObject(camera);
 
+    LOG(logName<<"SETUP OBJ TO WORLD");
     GameCamera* gameObject = new GameCamera();
     gameObject->SetTexture(texture);
+    gameObject->SetPosition(glm::vec3(0.0f, 2.0f, 0.0f));
     gameObject->LoadMeshes("mesh.glb");
-    camera->SetTexture(texture);
+    LOG(logName<<"ADD OBJ TO WORLD");
     world->AddGameObject(gameObject);
 
+    GameCamera* gameObject2 = new GameCamera();
+    gameObject2->SetTexture(texture);
+    gameObject2->LoadMeshes("mesh2.glb");
+    LOG(logName<<"ADD OBJ TO WORLD");
+    world->AddGameObject(gameObject2);
+
+    LOG(logName<<"ADD VERTICES");
     openGLModule->AddVertices(0,gameObject->GetMeshes());
+    openGLModule->AddVertices(0,gameObject2->GetMeshes());
+    LOG(logName<<"ADD INDICES");
     openGLModule->AddIndices(gameObject->GetIndices());
+    openGLModule->AddIndices(gameObject2->GetIndices());
 
     //モジュールを初期化
     gameWindow->InitModule();
+    LOG(logName<<"INIT MODULE DONE");
 
     //シェダープログラムをセット
     world->SetShaderProgram(openGLModule->GetShaderProgram());
+    LOG(logName<<"SETTING UP SHADER PROGRAM");
 
     while (!gameWindow->ShouldCloseWindow()) {
         world->Update();

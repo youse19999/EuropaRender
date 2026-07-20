@@ -18,6 +18,8 @@ private:
 
     nlohmann::json json;
     std::vector<GameObject*> gameObjects;
+
+    unsigned int currentIndexOffset;
 public:
     GameWorld(GLFWwindow* window);
 

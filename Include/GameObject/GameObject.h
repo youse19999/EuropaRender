@@ -15,14 +15,18 @@
 
 
 
+extern unsigned int lastIndexPosition;
 
 class GameObject {
 private:
+
     VirtualTexture* texture;
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 protected:
+    bool textureHasLoaded = false;
+
     glm::vec3 position = glm::vec3(0.0,0.0,0.0);
     glm::vec3 rotation = glm::vec3(0.0,0.0,0.0);
     glm::vec3 scale = glm::vec3(1.0,1.0,1.0);
@@ -36,6 +40,7 @@ public:
     glm::mat4 GetModelMatrix();
     VirtualTexture* GetTexture();
     void SetTexture(VirtualTexture* texture);
+    bool GetTextureHasLoaded();
 };
 
 #endif //EUROPARENDER_GAMEOBJECT_H

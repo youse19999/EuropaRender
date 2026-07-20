@@ -5,8 +5,10 @@
 #include "GameWindow.h"
 
 #include <iostream>
+#include <sstream>
 
 #include "Game.h"
+#include "logger.h"
 
 void GameWindow::Create() {
     this->Init();
@@ -34,7 +36,7 @@ void GameWindow::Init() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     //ウィンドウを作成 TODO:サイズ変更できるようにする。
-    window = glfwCreateWindow(800, 600, "Window Title", NULL, NULL);
+    window = glfwCreateWindow(1200, 800, "Window Title", NULL, NULL);
 
     if (!window) {
         glfwTerminate();
@@ -54,6 +56,8 @@ void GameWindow::PollEvent() {
 
 }
 void GameWindow::Render() {
+    LOGGER_RENDER.str("");
+    LOGGER_RENDER.clear();
     //レンダリングのモジュールをfor
     for (auto module : modules) {
         module->Render();

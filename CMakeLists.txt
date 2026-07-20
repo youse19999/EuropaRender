@@ -10,6 +10,9 @@ include(FetchContent)
 
 include(FetchContent)
 
+add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+add_link_options(-fsanitize=address)
+
 set(ASSIMP_BUILD_IFC_IMPORTER OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
@@ -85,7 +88,7 @@ target_compile_definitions(EuropaRender PRIVATE
 
 add_executable(EuropaTest main.cpp)
 
-target_compile_options(EuropaRender PUBLIC -DEBUG_MODE)
+target_compile_options(EuropaTest PUBLIC -DEBUG_MODE)
 
 target_precompile_headers(EuropaRender PUBLIC Include/pch.h)
 target_precompile_headers(EuropaTest PUBLIC Include/pch.h)

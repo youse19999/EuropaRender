@@ -1,15 +1,17 @@
 //
 // Created by youse on 2026/07/20.
 //
+#include <sstream>
 
 #ifndef EUROPARENDER_LOGGER_H
 #define EUROPARENDER_LOGGER_H
 
-//BYE BYE LOGGER!
-#ifdef NOT DEBUG_MODE
-    #define LOG(expression)
-#else
-    #define LOG(expression) std::cout << expression << std::endl
-#endif
+extern std::stringstream LOGGER_STREAM;
+extern std::stringstream LOGGER_RENDER;
 
-#endif //EUROPARENDER_LOGGER_H
+#define LOG(expression) LOGGER_STREAM << expression << '\n'
+#define LOG_RENDER(expression) LOGGER_RENDER << expression << '\n'
+
+
+
+#endif //EUROPARENDER_LOGGER_Hf

@@ -6,7 +6,12 @@
 #include "GameWindow.h"
 
 #include <iostream>
+#include <sstream>
 #include <glm/gtc/type_ptr.hpp>
+
+std::stringstream LOGGER_RENDER;
+
+#include "logger.h"
 
 void GameOpenGLModule::Init() {
     GLenum err = glewInit();
@@ -61,13 +66,13 @@ void GameOpenGLModule::Init() {
 
         const char* fragmentShaderSource = "#version 330 core\n"
             "out vec4 FragColor;\n"
+            "uniform sampler2D texture1;\n"
             "in vec3 POSITION;\n"
             "in vec3 NORMAL;\n"
             "in vec2 UV;\n"
             "void main() {\n"
-            "   // すべての入力をブレンドして計算に使用する\n"
             "   vec3 combined = normalize(NORMAL) * 0.5 + POSITION * 0.001 + vec3(UV, 0.0);\n"
-            "   FragColor = vec4(combined, 1.0f);\n"
+            "   FragColor = texture(texture1, UV);\n"
             "}\n\0";
 
     GLint success;
@@ -124,7 +129,7 @@ void GameOpenGLModule::AddVertices(unsigned int object, std::vector<Vertex> _ver
     vertices.push_back(_vertices);
 }
 void GameOpenGLModule::AddIndices(std::vector<unsigned int> _indices) {
-        resultIndices.insert(resultIndices.end(),_indices.begin(),_indices.end());
+    resultIndices.insert(resultIndices.end(),_indices.begin(),_indices.end());
 }
 
 GameOpenGLModule::GameOpenGLModule(GLFWwindow *window) : GameRenderModule(window) {
