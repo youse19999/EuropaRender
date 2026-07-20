@@ -24,6 +24,8 @@ private:
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
+    std::vector<glm::mat4> jointMatrix;
+    std::vector<tinygltf::Node> jointsNode;
 protected:
     bool textureHasLoaded = false;
 
@@ -34,9 +36,11 @@ public:
     virtual ~GameObject();
     virtual nlohmann::json GetJson();
     virtual std::vector<unsigned int> GetIndices();
+    virtual std::vector<glm::mat4> GetJointMatrix();
+    virtual std::vector<tinygltf::Node> GetJoints();
     virtual std::vector<Vertex> GetMeshes();
     virtual void Action() = 0;
-    virtual void LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::Skin* skin);
+    virtual void LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf::Skin* skin,tinygltf::Animation* animation);
     glm::mat4 GetModelMatrix();
     VirtualTexture* GetTexture();
     void SetTexture(VirtualTexture* texture);

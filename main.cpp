@@ -107,17 +107,42 @@ int main() {
     if (!ret) {
         LOG( err << std::endl);
     }
-    //const tinygltf::Mesh mesh
-    for (int i = 0;i<model.meshes.size(); i++) {
+    LOG("---GLTF NODES---");
+    //ノード回帰
+    for (int i = 0;i<model.nodes.size();i++) {
+        //ノードの実体の取得
+        auto node = model.nodes[i];
+        //子ですか？（親は子の情報を持ちません。逆です。）
+        bool isChild = (node.children.size() != 0);
+        //子であることｗ宣言。
+        LOG("I AM " << node.name << "|NO:"<<i);
+        if (isChild) {
+            //親を宣言
+            for (auto parent : node.children) {
+                LOG(node.name<< ">BE CHILD>" << model.nodes[parent].name);
+            }
+        }
+
+        //実体作成
         LOG(logName<<"SETUP OBJ TO WORLD");
         GameCamera* gameObject = new GameCamera();
         gameObject->SetTexture(texture);
         gameObject->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-        if (i < model.skins.size()) {
-            gameObject->LoadMeshes(model,model.meshes[i],&model.skins[i]);
-        }else {
-            gameObject->LoadMeshes(model,model.meshes[i],nullptr);
+        tinygltf::Animation* animation = nullptr;
+        tinygltf::Skin* skin = nullptr;
+        tinygltf::Mesh* mesh = nullptr;
+        if (node.mesh < model.meshes.size()) {
+            mesh = &model.meshes[node.mesh];
         }
+        if (node.skin < model.skins.size()) {
+            skin = &model.skins[node.skin];
+        }
+        if (1 < model.animations.size()) {
+            animation = nullptr;
+        }else {
+            animation = &model.animations[0];
+        }
+        gameObject->LoadMeshes(model,mesh,skin,animation);
         LOG(logName<<"ADD OBJ TO WORLD");
         world->AddGameObject(gameObject);
         LOG(logName<<"ADD VERTICES");
@@ -125,6 +150,8 @@ int main() {
         LOG(logName<<"ADD INDICES");
         openGLModule->AddIndices(gameObject->GetIndices());
     }
+    LOG("---GLTF NODES---");
+    //const tinygltf::Mesh mesh
 
     //モジュールを初期化
     gameWindow->InitModule();

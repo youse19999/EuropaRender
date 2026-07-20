@@ -4,11 +4,17 @@
 
 #ifndef EUROPARENDER_GAMEWORLD_H
 #define EUROPARENDER_GAMEWORLD_H
+
 #include "GameObject.h"
 #include <nlohmann/json.hpp>
 
 #include "GameCamera.h"
 #include "GameOpenGLModule.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 class GameWorld:public GameRenderModule {
 private:

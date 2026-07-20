@@ -1,3 +1,6 @@
+#include <glm/gtc/type_ptr.hpp>
+
+#include "Game.h"
 #include "mat42str.h"
 //
 // Created by youse on 2026/07/19.
@@ -43,7 +46,7 @@ glm::mat4 GameObject::GetModelMatrix() {
     return model;
 }
 
-void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::Skin* skin) {
+void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf::Skin* skin,tinygltf::Animation* animation) {
 
     std::vector<int> indices;
     std::vector<glm::vec3> position;
@@ -65,10 +68,10 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::
     | TINYGLTF_COMPONENT_TYPE_DOUBLE         | double        |
     +----------------------------------------+---------------+
      */
-    if (true) {
+    if (mesh != nullptr) {
         // 2. メッシュ内のプリミティブ（サブメッシュ）をループ
-        for (const auto& primitive : mesh.primitives) {
-            LOG(mesh.primitives.size() << std::endl);
+        for (const auto& primitive : mesh->primitives) {
+            LOG(mesh->primitives.size() << std::endl);
             Vertex vertex;
             // --- 頂点座標 (POSITION) の取得 ---
             auto posIt = primitive.attributes.find("POSITION");
@@ -263,10 +266,13 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::
 
         lastIndexPosition+=this->vertices.size();
     }
-    if (true) {
+    if (skin != nullptr) {
         LOG("---SKIN---");
         if (skin != nullptr) {
-            std::vector<int> jointNodeIndices = skin->joints;
+            //クラッシュ
+            for (auto index : skin->joints) {
+                jointsNode.push_back(model.nodes[index]);
+            }
             if (skin->inverseBindMatrices >= 0) {
                 const tinygltf::Accessor& accessor = model.accessors[skin->inverseBindMatrices];
                 const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
@@ -276,15 +282,64 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::
                     &(buffer.data[bufferView.byteOffset + accessor.byteOffset])
                 );
                 //glm::mat4に直接入れる。
-                const glm::mat4* matrices = reinterpret_cast<const glm::mat4*>(matrixData);
                 for (size_t i = 0; i < accessor.count; ++i) {
-                    const float* mat = matrixData + (i * 16);
-                    LOG(Mat42Str(*mat).str());
+                    const float* matPtr = matrixData + (i * 16);
+                    glm::mat4 matrixVec4Data = glm::make_mat4(matPtr);
+                    jointMatrix.push_back(matrixVec4Data);
                 }
             }
         }
     }
+    if (animation != nullptr) {
+    for (const auto& channel : animation->channels) {
+        int targetNode = channel.target_node;
+        std::string path = channel.target_path;
 
+        const auto& sampler = animation->samplers[channel.sampler];
+        std::string interpolation = sampler.interpolation;
+
+        const tinygltf::Accessor& inputAccessor = model.accessors[sampler.input];
+        const tinygltf::BufferView& inputBufferView = model.bufferViews[inputAccessor.bufferView];
+        const tinygltf::Buffer& inputBuffer = model.buffers[inputBufferView.buffer];
+
+        const float* times = reinterpret_cast<const float*>(
+                &inputBuffer.data[inputBufferView.byteOffset + inputAccessor.byteOffset]
+        );
+        const tinygltf::Accessor& outputAccessor = model.accessors[sampler.output];
+        const tinygltf::BufferView& outputBufferView = model.bufferViews[outputAccessor.bufferView];
+        const tinygltf::Buffer& outputBuffer = model.buffers[outputBufferView.buffer];
+
+        const float* values = reinterpret_cast<const float*>(
+            &outputBuffer.data[outputBufferView.byteOffset + outputAccessor.byteOffset]
+        );
+
+        std::cout << "  Target Node: " << targetNode << " | Path: " << path << std::endl;
+
+        for (size_t i = 0; i < inputAccessor.count; ++i) {
+            float time = times[i];
+
+            if (path == "translation" || path == "scale") {
+                float x = values[i * 3 + 0];
+                float y = values[i * 3 + 1];
+                float z = values[i * 3 + 2];
+            }
+            else if (path == "rotation") {
+                float x = values[i * 4 + 0];
+                float y = values[i * 4 + 1];
+                float z = values[i * 4 + 2];
+                float w = values[i * 4 + 3];
+            }
+        }
+    }
+    }
+}
+
+std::vector<glm::mat4> GameObject::GetJointMatrix() {
+    return jointMatrix;
+}
+
+std::vector<tinygltf::Node> GameObject::GetJoints() {
+    return jointsNode;
 }
 
 GameObject::~GameObject() {
