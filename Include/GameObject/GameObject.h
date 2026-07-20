@@ -36,7 +36,7 @@ public:
     virtual std::vector<unsigned int> GetIndices();
     virtual std::vector<Vertex> GetMeshes();
     virtual void Action() = 0;
-    virtual void LoadMeshes(std::string path);
+    virtual void LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::Skin* skin);
     glm::mat4 GetModelMatrix();
     VirtualTexture* GetTexture();
     void SetTexture(VirtualTexture* texture);

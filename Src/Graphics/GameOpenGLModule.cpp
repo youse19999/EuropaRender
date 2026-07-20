@@ -84,8 +84,8 @@ void GameOpenGLModule::Init() {
             "in vec4 WEIGHT;\n"
             "void main() {\n"
             "   vec3 combined = normalize(NORMAL) * 0.5 + POSITION * 0.001 + vec3(UV, 0.0);\n"
-            "   FragColor = WEIGHT;\n"
-            //"   FragColor = texture(texture1, UV);\n"
+            //"   FragColor = WEIGHT;\n"
+            "   FragColor = texture(texture1, UV);\n"
             "}\n\0";
 
     GLint success;

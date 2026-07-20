@@ -78,6 +78,7 @@ add_library(EuropaRender
         Include/logger.h
         Include/mat42str.h
         Src/mat42str.cpp
+        Include/GameObject/TreeObject.h
 )
 
 target_compile_definitions(EuropaRender PRIVATE

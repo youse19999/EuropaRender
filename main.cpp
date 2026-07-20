@@ -1,6 +1,13 @@
 #include <iostream>
 
-#include "tiny_gltf.h"
+
+
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image.h>
+#include <stb_image_write.h>
 
 //OpenGLモジュールはGameWindowよりも先に呼び出さないといけない。
 #include "GameCamera.h"
@@ -89,26 +96,35 @@ int main() {
     //カメラを追加
     world->AddGameObject(camera);
 
-    LOG(logName<<"SETUP OBJ TO WORLD");
-    GameCamera* gameObject = new GameCamera();
-    gameObject->SetTexture(texture);
-    gameObject->SetPosition(glm::vec3(0.0f, 0.0f, 5.0f));
-    gameObject->LoadMeshes("mesh.glb");
-    LOG(logName<<"ADD OBJ TO WORLD");
-    world->AddGameObject(gameObject);
+    std::string err;
+    std::string warn;
+    bool ret = false;
 
-    GameCamera* gameObject2 = new GameCamera();
-    gameObject2->SetTexture(texture);
-    gameObject2->LoadMeshes("mesh2.glb");
-    LOG(logName<<"ADD OBJ TO WORLD");
-    world->AddGameObject(gameObject2);
+    tinygltf::Model model;
 
-    LOG(logName<<"ADD VERTICES");
-    openGLModule->AddVertices(0,gameObject->GetMeshes());
-    openGLModule->AddVertices(0,gameObject2->GetMeshes());
-    LOG(logName<<"ADD INDICES");
-    openGLModule->AddIndices(gameObject->GetIndices());
-    openGLModule->AddIndices(gameObject2->GetIndices());
+    tinygltf::TinyGLTF loader;
+    ret = loader.LoadBinaryFromFile(&model, &err, &warn, "mesh.glb");
+    if (!ret) {
+        LOG( err << std::endl);
+    }
+    //const tinygltf::Mesh mesh
+    for (int i = 0;i<model.meshes.size(); i++) {
+        LOG(logName<<"SETUP OBJ TO WORLD");
+        GameCamera* gameObject = new GameCamera();
+        gameObject->SetTexture(texture);
+        gameObject->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+        if (i < model.skins.size()) {
+            gameObject->LoadMeshes(model,model.meshes[i],&model.skins[i]);
+        }else {
+            gameObject->LoadMeshes(model,model.meshes[i],nullptr);
+        }
+        LOG(logName<<"ADD OBJ TO WORLD");
+        world->AddGameObject(gameObject);
+        LOG(logName<<"ADD VERTICES");
+        openGLModule->AddVertices(0,gameObject->GetMeshes());
+        LOG(logName<<"ADD INDICES");
+        openGLModule->AddIndices(gameObject->GetIndices());
+    }
 
     //モジュールを初期化
     gameWindow->InitModule();

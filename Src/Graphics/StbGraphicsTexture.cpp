@@ -5,9 +5,8 @@
 #include <iostream>
 #include <ostream>
 #include <Graphics/StbGraphicsTexture.h>
-
+#include <pch.h>
 #include "logger.h"
-#include "stb_image.h"
 
 void StbGraphicsTexture::SetTexture(std::string path) {
     this->textureData = stbi_load(path.c_str(), &width, &height, &channels, 0);

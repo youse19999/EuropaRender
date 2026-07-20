@@ -4,11 +4,6 @@
 //
 unsigned int lastIndexPosition;
 
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "tiny_gltf.h"
-
 #include <GameObject.h>
 #include <iostream>
 
@@ -48,17 +43,7 @@ glm::mat4 GameObject::GetModelMatrix() {
     return model;
 }
 
-void GameObject::LoadMeshes(std::string path) {
-    std::string err;
-    std::string warn;
-    bool ret = false;
-    tinygltf::Model model;
-
-    tinygltf::TinyGLTF loader;
-    ret = loader.LoadBinaryFromFile(&model, &err, &warn, path);
-    if (!ret) {
-        LOG( err << std::endl);
-    }
+void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh mesh,tinygltf::Skin* skin) {
 
     std::vector<int> indices;
     std::vector<glm::vec3> position;
@@ -80,8 +65,7 @@ void GameObject::LoadMeshes(std::string path) {
     | TINYGLTF_COMPONENT_TYPE_DOUBLE         | double        |
     +----------------------------------------+---------------+
      */
-    // 1. モデル内のすべてのメッシュをループ
-    for (const auto& mesh : model.meshes) {
+    if (true) {
         // 2. メッシュ内のプリミティブ（サブメッシュ）をループ
         for (const auto& primitive : mesh.primitives) {
             LOG(mesh.primitives.size() << std::endl);
@@ -279,22 +263,24 @@ void GameObject::LoadMeshes(std::string path) {
 
         lastIndexPosition+=this->vertices.size();
     }
-    for (const auto& skin : model.skins) {
+    if (true) {
         LOG("---SKIN---");
-        std::vector<int> jointNodeIndices = skin.joints;
-        if (skin.inverseBindMatrices >= 0) {
-            const tinygltf::Accessor& accessor = model.accessors[skin.inverseBindMatrices];
-            const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
-            const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+        if (skin != nullptr) {
+            std::vector<int> jointNodeIndices = skin->joints;
+            if (skin->inverseBindMatrices >= 0) {
+                const tinygltf::Accessor& accessor = model.accessors[skin->inverseBindMatrices];
+                const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+                const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
-            const float* matrixData = reinterpret_cast<const float*>(
-                &(buffer.data[bufferView.byteOffset + accessor.byteOffset])
-            );
-            //glm::mat4に直接入れる。
-            const glm::mat4* matrices = reinterpret_cast<const glm::mat4*>(matrixData);
-            for (size_t i = 0; i < accessor.count; ++i) {
-                const float* mat = matrixData + (i * 16);
-                LOG(Mat42Str(*mat).str());
+                const float* matrixData = reinterpret_cast<const float*>(
+                    &(buffer.data[bufferView.byteOffset + accessor.byteOffset])
+                );
+                //glm::mat4に直接入れる。
+                const glm::mat4* matrices = reinterpret_cast<const glm::mat4*>(matrixData);
+                for (size_t i = 0; i < accessor.count; ++i) {
+                    const float* mat = matrixData + (i * 16);
+                    LOG(Mat42Str(*mat).str());
+                }
             }
         }
     }
