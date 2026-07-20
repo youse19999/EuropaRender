@@ -92,7 +92,7 @@ int main() {
     LOG(logName<<"SETUP OBJ TO WORLD");
     GameCamera* gameObject = new GameCamera();
     gameObject->SetTexture(texture);
-    gameObject->SetPosition(glm::vec3(0.0f, 2.0f, 0.0f));
+    gameObject->SetPosition(glm::vec3(0.0f, 0.0f, 5.0f));
     gameObject->LoadMeshes("mesh.glb");
     LOG(logName<<"ADD OBJ TO WORLD");
     world->AddGameObject(gameObject);

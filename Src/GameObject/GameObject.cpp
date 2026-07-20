@@ -1,3 +1,4 @@
+#include "mat42str.h"
 //
 // Created by youse on 2026/07/19.
 //
@@ -63,8 +64,21 @@ void GameObject::LoadMeshes(std::string path) {
     std::vector<glm::vec3> position;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
+    std::vector<glm::vec4> joints;
+    std::vector<glm::vec4> weights;
     /*
-     *AIが記述　TODO: ここをassimpにAIに置き換えさせる。
+    +----------------------------------------+---------------+
+    | TINYGLTF_COMPONENT_TYPE                | C++ Data Type |
+    +----------------------------------------+---------------+
+    | TINYGLTF_COMPONENT_TYPE_BYTE           | int8_t        |
+    | TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE  | uint8_t       |
+    | TINYGLTF_COMPONENT_TYPE_SHORT          | int16_t       |
+    | TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT | uint16_t      |
+    | TINYGLTF_COMPONENT_TYPE_INT            | int32_t       |
+    | TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT   | uint32_t      |
+    | TINYGLTF_COMPONENT_TYPE_FLOAT          | float         |
+    | TINYGLTF_COMPONENT_TYPE_DOUBLE         | double        |
+    +----------------------------------------+---------------+
      */
     // 1. モデル内のすべてのメッシュをループ
     for (const auto& mesh : model.meshes) {
@@ -183,12 +197,81 @@ void GameObject::LoadMeshes(std::string path) {
                     }
                 }
             }
+            LOG("---START ABOUT BONE AND WEIGHTS START---\n");
+            //最大4つまで。
+            for (int n = 0;n<1;n++) {
+                /*
+                 *対応するPRIMITIVEのJOINTSとWEIGHTを受け取る。
+                 */
+                LOG(">PRIMITIVE" << &primitive);
+                std::stringstream tag;
+                tag << "JOINTS_";
+                tag << n;
+                LOG(">>" << tag.str() << "\n");
+                auto jointsIt = primitive.attributes.find(tag.str());
+                if (jointsIt != primitive.attributes.end()) {
+                    const tinygltf::Accessor& accessor = model.accessors[jointsIt->second];
+                    const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+                    const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+
+                    const uint8_t* dataPtr = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+                    size_t stride = accessor.ByteStride(bufferView); // 要素ごとのバイト幅
+
+                    for (size_t i = 0; i < accessor.count; ++i) {
+                        std::stringstream jointSSteam;
+                        // 型に応じたキャストが必要 (VEC4 として扱う)
+                        // 例: uint16_t[4] または uint8_t[4]
+                        //uint16_t
+                        if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+                            const uint16_t* joint = reinterpret_cast<const uint16_t*>(dataPtr + (i * stride));
+                            glm::vec4 jointData = glm::vec4(joint[0],joint[1],joint[2],joint[3]);
+                            joints.push_back(jointData);
+                        }
+                        //uint8_t
+                        if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+                            const uint8_t* joint = reinterpret_cast<const uint8_t*>(dataPtr + (i * stride));
+                            //jointSSteam << static_cast<int>(joint[0]) << "|" << static_cast<int>(joint[1]) << "|" << static_cast<int>(joint[2]) << "|" << static_cast<int>(joint[3]) << "|";
+                            //std::cout << jointSSteam.str() << std::endl;
+                            //LOG(jointSSteam.str());
+                            glm::vec4 jointData = glm::vec4(joint[0],joint[1],joint[2],joint[3]);
+                            joints.push_back(jointData);
+                        }
+                    }
+                }
+                std::stringstream tag2;
+                tag2 << "WEIGHTS_";
+                tag2 << n;
+                LOG(">>" << tag2.str() << "\n");
+                auto weightsIt = primitive.attributes.find(tag2.str());
+                if (weightsIt != primitive.attributes.end()) {
+                    const tinygltf::Accessor& accessor = model.accessors[weightsIt->second];
+                    const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+                    const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+
+                    const float* weightsData = reinterpret_cast<const float*>(
+                        buffer.data.data() + bufferView.byteOffset + accessor.byteOffset
+                    );
+
+                    for (size_t i = 0; i < accessor.count; ++i) {
+                        const float* weightVec4 = weightsData + (i * 4);
+                        const glm::vec4 weightVec4Data = glm::vec4(weightVec4[0],weightVec4[1],weightVec4[2],weightVec4[3]);
+                        weights.push_back(weightVec4Data);
+                    }
+                }
+                LOG("---END ABOUT BONE AND WEIGHTS END---\n");
+            }
         }
         LOG("---INPUT RESULT---\n" << "POSITION SIZE:" << position.size() << "\nNORMAL SIZE" << normals.size() <<  "\nUV SIZES" << uvs.size() << "\nLastIndexPosition:" << lastIndexPosition << "\n---INPUT RESULT---" << std::endl);
         for (int i = 0;i<position.size();i++) {
             Vertex vertex;
             vertex.Position = position[i];
             vertex.Normal = normals[i];
+            if (joints.size() != 0) {
+                vertex.Joint = joints[i];
+            }
+            if (weights.size() != 0) {
+                vertex.Weight = weights[i];
+            }
             vertex.UV = uvs[i];
             vertices.push_back(vertex);
         }
@@ -196,6 +279,26 @@ void GameObject::LoadMeshes(std::string path) {
 
         lastIndexPosition+=this->vertices.size();
     }
+    for (const auto& skin : model.skins) {
+        LOG("---SKIN---");
+        std::vector<int> jointNodeIndices = skin.joints;
+        if (skin.inverseBindMatrices >= 0) {
+            const tinygltf::Accessor& accessor = model.accessors[skin.inverseBindMatrices];
+            const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+            const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+
+            const float* matrixData = reinterpret_cast<const float*>(
+                &(buffer.data[bufferView.byteOffset + accessor.byteOffset])
+            );
+            //glm::mat4に直接入れる。
+            const glm::mat4* matrices = reinterpret_cast<const glm::mat4*>(matrixData);
+            for (size_t i = 0; i < accessor.count; ++i) {
+                const float* mat = matrixData + (i * 16);
+                LOG(Mat42Str(*mat).str());
+            }
+        }
+    }
+
 }
 
 GameObject::~GameObject() {

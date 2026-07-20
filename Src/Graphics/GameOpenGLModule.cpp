@@ -45,15 +45,23 @@ void GameOpenGLModule::Init() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, UV));
     glEnableVertexAttribArray(2);
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Joint));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Weight));
+    glEnableVertexAttribArray(4);
 
     // 1. シェーダーのソースコード（GLSL）を用意
     const char* vertexShaderSource = "#version 330 core\n"
         "layout (location = 0) in vec3 aPos;\n"
         "layout (location = 1) in vec3 aNormal;\n"
         "layout (location = 2) in vec2 aUV;\n"
+        "layout (location = 3) in vec4 aJoint;\n"
+        "layout (location = 4) in vec4 aWeight;\n"
         "out vec3 POSITION;\n"
         "out vec3 NORMAL;\n"
         "out vec2 UV;\n"
+        "out vec4 JOINT;\n"
+        "out vec4 WEIGHT;\n"
         "uniform mat4 projection;\n"
         "uniform mat4 view;\n"
         "uniform mat4 model;\n"
@@ -62,6 +70,8 @@ void GameOpenGLModule::Init() {
         "   UV = aUV;\n"
         "   NORMAL = aNormal;\n"
         "   POSITION = aPos;\n"
+        "   JOINT = aJoint;\n"
+        "   WEIGHT = aWeight;\n"
         "}\0";
 
         const char* fragmentShaderSource = "#version 330 core\n"
@@ -70,9 +80,12 @@ void GameOpenGLModule::Init() {
             "in vec3 POSITION;\n"
             "in vec3 NORMAL;\n"
             "in vec2 UV;\n"
+            "in vec4 JOINT;\n"
+            "in vec4 WEIGHT;\n"
             "void main() {\n"
             "   vec3 combined = normalize(NORMAL) * 0.5 + POSITION * 0.001 + vec3(UV, 0.0);\n"
-            "   FragColor = texture(texture1, UV);\n"
+            "   FragColor = WEIGHT;\n"
+            //"   FragColor = texture(texture1, UV);\n"
             "}\n\0";
 
     GLint success;

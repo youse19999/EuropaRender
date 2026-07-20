@@ -10,9 +10,6 @@ include(FetchContent)
 
 include(FetchContent)
 
-add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-add_link_options(-fsanitize=address)
-
 set(ASSIMP_BUILD_IFC_IMPORTER OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
@@ -80,6 +77,7 @@ add_library(EuropaRender
         Include/Graphics/ImGUI/ImGUIGraphicsDebugger.h
         Include/logger.h
         Include/mat42str.h
+        Src/mat42str.cpp
 )
 
 target_compile_definitions(EuropaRender PRIVATE

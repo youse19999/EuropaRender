@@ -9,6 +9,8 @@ struct Vertex {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec2 UV;
+    glm::vec4 Joint;
+    glm::vec4 Weight;
 };
 
 #endif //EUROPARENDER_VERTEX_H
