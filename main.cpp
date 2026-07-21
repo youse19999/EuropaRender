@@ -3,13 +3,12 @@
 
 
 #define TINYGLTF_IMPLEMENTATION
-#include <tiny_gltf.h>
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image.h>
-#include <stb_image_write.h>
+#include <tiny_gltf.h>
 
 //OpenGLモジュールはGameWindowよりも先に呼び出さないといけない。
+#include "FKMath.h"
 #include "GameCamera.h"
 #include "GameOpenGLModule.h"
 
@@ -45,7 +44,7 @@ unsigned int objectSum = 0;
 
 std::vector<unsigned int> loadedObjects;
 
-GameCamera* Load(tinygltf::Model model,int i,VirtualTexture* texture,GameWorld* world,GameOpenGLModule* openGLModule) {
+GameCamera* Load(tinygltf::Model model,int i,GameWorld* world,GameOpenGLModule* openGLModule) {
     //ノードの実体の取得t
     if (std::find(loadedObjects.begin(), loadedObjects.end(), i) != loadedObjects.end()) {
         return nullptr;
@@ -58,7 +57,8 @@ GameCamera* Load(tinygltf::Model model,int i,VirtualTexture* texture,GameWorld* 
 
     //実体作成
     GameCamera *gameObject = new GameCamera();
-    gameObject->SetTexture(texture);
+    //gameObject->SetTexture(texture);
+
     if(node.translation.size() > 2) {
         gameObject->SetPosition(glm::vec3(node.translation[0],node.translation[1],node.translation[2]));
     }else {
@@ -69,9 +69,14 @@ GameCamera* Load(tinygltf::Model model,int i,VirtualTexture* texture,GameWorld* 
     }else {
         gameObject->SetScale(glm::vec3(1,1,1));
     }
-    if(node.rotation.size() > 2) {
-        gameObject->SetRotation(glm::quat(node.rotation[0],node.scale[1],node.scale[2],node.scale[3]));
+    if(node.rotation.size() > 3) {
+        //tlgfはwxyz
+        gameObject->SetRotation(glm::quat(node.rotation[3],node.rotation[0],node.rotation[1],node.rotation[2]));
+    }else {
+        gameObject->SetRotation(glm::quat(1,0,0,0));
     }
+
+
     gameObject->SetID(gameObjectLastOffset+i);
     gameObject->SetName(node.name);
     tinygltf::Animation *animation = nullptr;
@@ -91,7 +96,7 @@ GameCamera* Load(tinygltf::Model model,int i,VirtualTexture* texture,GameWorld* 
         for (auto child : node.children) {
             GameObject* childObject = world->GetGameObject(child);
             if (childObject == nullptr) {
-                auto createdChildObject = Load(model,child,texture,world,openGLModule);
+                auto createdChildObject = Load(model,child,world,openGLModule);
                 if (createdChildObject != nullptr) {
                     createdChildObject->SetParent(gameObject);
                 }
@@ -146,9 +151,6 @@ int main() {
     LOG(logName<<"ADDING IMGUI MODULE DONE");
 
     LOG(logName<<"SET TEXTURE");
-    StbGraphicsTexture* texture = new StbGraphicsTexture();
-    texture->SetTexture("image.png");
-    texture->BindTexture();
 
     LOG(logName<<"SET CAMERA");
     //カメラを作成
@@ -176,7 +178,33 @@ int main() {
     std::map<unsigned int,unsigned int> notLoadedObjects;
     //ノード回帰
     for (int i = 0;i<model.nodes.size();i++) {
-        Load(model,i,texture,world,openGLModule);
+        Load(model,i,world,openGLModule);
+        LOG("LOAD!");
+    }
+    /*
+     *FKの適応
+     */
+    for (auto gameObject : GameWorld::GetInstance().get()->GetAllGameObject()) {
+        glm::vec3 scale;
+        glm::quat rotation;
+        glm::vec3 translation;
+        glm::vec3 skew;
+        glm::vec4 perspective;
+
+        glm::mat4 a = CalculateNodeModelMatrix(gameObject);
+
+        glm::decompose(
+            a,
+            scale,
+            rotation,
+            translation,
+            skew,
+            perspective
+        );
+
+        gameObject->SetPosition(translation);
+        gameObject->SetScale(scale);
+        gameObject->SetRotation(rotation);
     }
     GameWorld::GetInstance().get()->GetGameObject(0)->ProcessAnimation(model,&model.animations[0],0);
     gameObjectLastOffset += objectSum;

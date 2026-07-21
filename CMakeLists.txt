@@ -79,6 +79,8 @@ add_library(EuropaRender
         Include/mat42str.h
         Src/mat42str.cpp
         Include/GameObject/TreeObject.h
+        Include/FKMath.h
+        Src/FKMath.cpp
 )
 
 target_compile_definitions(EuropaRender PRIVATE

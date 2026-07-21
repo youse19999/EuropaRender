@@ -26,6 +26,7 @@ private:
     int id = 0;
 
     GameObject* parent = nullptr;
+    std::vector<GameObject*> children;
 
     std::string name;
 
@@ -54,12 +55,15 @@ public:
     glm::mat4 GetModelMatrix();
     VirtualTexture* GetTexture();
     void SetTexture(VirtualTexture* texture);
-    bool GetTextureHasLoaded();
+
+    bool GetTextureIsLoaded();
 
     void ProcessAnimation(tinygltf::Model model,tinygltf::Animation* animation,unsigned int offset);
 
     GameObject* GetParent();
+    std::vector<GameObject*> GetChildren();
     void SetParent(GameObject* obj);
+    void AddChild(GameObject* obj);
 
     void SetID(int _id);
     int GetID();

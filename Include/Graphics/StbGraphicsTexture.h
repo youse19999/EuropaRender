@@ -15,8 +15,6 @@ public:
     StbGraphicsTexture();
     void SetTexture(std::string path);
     ~StbGraphicsTexture();
-
-    void BindTexture() override;
 private:
     GLuint textureID;
 };

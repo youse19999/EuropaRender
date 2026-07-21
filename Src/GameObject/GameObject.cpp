@@ -6,6 +6,7 @@
 #include "Game.h"
 #include "GameWorld.h"
 #include "mat42str.h"
+#include "StbGraphicsTexture.h"
 //
 // Created by youse on 2026/07/19.
 //
@@ -33,10 +34,10 @@ std::vector<unsigned int> GameObject::GetIndices() {
 VirtualTexture* GameObject::GetTexture() {
     return texture;
 }
-
-bool GameObject::GetTextureHasLoaded() {
+bool GameObject::GetTextureIsLoaded() {
     return textureHasLoaded;
 }
+
 
 void GameObject::SetTexture(VirtualTexture* texture) {
     this->texture = texture;
@@ -45,14 +46,29 @@ void GameObject::SetTexture(VirtualTexture* texture) {
 
 glm::mat4 GameObject::GetModelMatrix() {
     glm::mat4 model = glm::mat4(1.0f);
+    /*
     model = glm::translate(model, position);
-    model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 R = glm::mat4_cast(this->GetRotation());
     model = glm::scale(model, scale);
-    return model;
+    */
+
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), this->GetPosition());
+    glm::mat4 R = glm::mat4_cast(this->GetRotation());
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), this->GetScale());
+    return T * R * S;
 }
 
 void GameObject::SetParent(GameObject *obj) {
     this->parent = obj;
+    this->parent->AddChild(this);
+}
+
+void GameObject::AddChild(GameObject *obj) {
+    this->children.push_back(obj);
+}
+
+std::vector<GameObject *> GameObject::GetChildren() {
+    return this->children;
 }
 
 void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf::Skin* skin) {
@@ -259,6 +275,39 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                     }
                 }
                 LOG("---END ABOUT BONE AND WEIGHTS END---\n");
+            }
+
+            if (!model.images.empty()) {
+                int material = primitive.material;
+                int textureIndex = model.materials[material].pbrMetallicRoughness.baseColorTexture.index;
+                int imageIndex = model.textures[textureIndex].source;
+                if (textureIndex == -1) {
+                    continue;
+                }
+                tinygltf::Image& image = model.images[imageIndex];
+                int width = image.width;
+                int height = image.height;
+
+                GLenum format = GL_RGBA;
+                GLenum internalFormat = GL_RGBA8;
+
+                if (image.component == 1) {
+                    format = GL_RED;
+                    internalFormat = GL_R8;
+                } else if (image.component == 2) {
+                    format = GL_RG;
+                    internalFormat = GL_RG8;
+                } else if (image.component == 3) {
+                    format = GL_RGB;
+                    internalFormat = GL_RGB8;
+                } else if (image.component == 4) {
+                    format = GL_RGBA;
+                    internalFormat = GL_RGBA8;
+                }
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+                texture = new StbGraphicsTexture();
+                texture->SetData(image.image,width,height,image.pixel_type,format,internalFormat);
+                textureHasLoaded = true;
             }
         }
         LOG("---INPUT RESULT---\n" << "POSITION SIZE:" << position.size() << "\nNORMAL SIZE" << normals.size() <<  "\nUV SIZES" << uvs.size() << "\nLastIndexPosition:" << lastIndexPosition << "\n---INPUT RESULT---" << std::endl);

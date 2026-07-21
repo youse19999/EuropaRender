@@ -4,6 +4,12 @@
 
 #ifndef EUROPARENDER_PCH_H
 #define EUROPARENDER_PCH_H
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include <stb_image_write.h>
 #include <stb_image.h>
 #include "tiny_gltf.h"
