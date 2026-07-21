@@ -19,9 +19,9 @@ void ImGUIExampleModule::RenderGUI() {
         ssName << obj->GetID() << obj->GetName();
         if (obj->GetParent() == nullptr) {
             if (ImGui::TreeNode(ssName.str().c_str())) {
-                //ImGui::SliderFloat("%s_x",&obj->GetPosition().x,-10,10,ssName.str().c_str());
-                //ImGui::SliderFloat("%s_y",&obj->GetPosition().y,-10,10,ssName.str().c_str());
-                //ImGui::SliderFloat("%s_z",&obj->GetPosition().z,-10,10,ssName.str().c_str());
+                ImGui::SliderFloat("%s_x",&obj->GetScale().x,-1,1,ssName.str().c_str());
+                ImGui::SliderFloat("%s_y",&obj->GetScale().y,-1,1,ssName.str().c_str());
+                ImGui::SliderFloat("%s_z",&obj->GetScale().z,-1,1,ssName.str().c_str());
                 ImGui::TreePop();
             }
         }

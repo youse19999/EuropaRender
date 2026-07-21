@@ -56,7 +56,7 @@ public:
     void SetTexture(VirtualTexture* texture);
     bool GetTextureHasLoaded();
 
-    void ProcessAnimation(tinygltf::Model model,tinygltf::Animation* animation);
+    void ProcessAnimation(tinygltf::Model model,tinygltf::Animation* animation,unsigned int offset);
 
     GameObject* GetParent();
     void SetParent(GameObject* obj);

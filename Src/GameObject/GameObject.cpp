@@ -264,15 +264,21 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
         LOG("---INPUT RESULT---\n" << "POSITION SIZE:" << position.size() << "\nNORMAL SIZE" << normals.size() <<  "\nUV SIZES" << uvs.size() << "\nLastIndexPosition:" << lastIndexPosition << "\n---INPUT RESULT---" << std::endl);
         for (int i = 0;i<position.size();i++) {
             Vertex vertex;
-            vertex.Position = position[i];
-            vertex.Normal = normals[i];
+            if (i < position.size()) {
+                vertex.Position = position[i];
+            }
+            if (i < normals.size()) {
+                vertex.Normal = normals[i];
+            }
             if (joints.size() != 0) {
                 vertex.Joint = joints[i];
             }
             if (weights.size() != 0) {
                 vertex.Weight = weights[i];
             }
-            vertex.UV = uvs[i];
+            if (uvs.size() != 0) {
+                vertex.UV = uvs[i];
+            }
             vertices.push_back(vertex);
         }
         this->indices.insert(this->indices.end(),indices.begin(),indices.end());
@@ -299,17 +305,18 @@ void GameObject::LoadMeshes(tinygltf::Model model,tinygltf::Mesh* mesh,tinygltf:
                 for (size_t i = 0; i < accessor.count; ++i) {
                     const float* matPtr = reinterpret_cast<const float*>(basePtr + (i * byteStride));
                     glm::mat4 matrixVec4Data = glm::make_mat4(matPtr);
+                    float v = matrixVec4Data[3][3];
                     jointMatrix.push_back(matrixVec4Data);
                 }
             }
         }
     }
 }
-void GameObject::ProcessAnimation(tinygltf::Model model,tinygltf::Animation* animation) {
-    //TODO:毎回呼び出されるため分離しないろいけない。
+void GameObject::ProcessAnimation(tinygltf::Model model,tinygltf::Animation* animation,unsigned int offset) {
+    //TODO:timeに対応する。
     if (animation != nullptr) {
         for (const auto& channel : animation->channels) {
-            int targetNode = channel.target_node;
+            int targetNode = channel.target_node+offset;
             const std::string& path = channel.target_path;
 
             const auto& sampler = animation->samplers[channel.sampler];

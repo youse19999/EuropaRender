@@ -97,10 +97,18 @@ void GameWorld::Render() {
             glActiveTexture(GL_TEXTURE0);
             //テクスチャを割り当てる。
             glBindTexture(GL_TEXTURE_2D, gameObject->GetTexture()->GetTextureID());
-            LOG_RENDER(this << ">>MOCK LOG " << gameObject->GetTexture()->GetTextureID());
         }else {
             LOG_RENDER(":( Texture is null" << this);
             LOG_RENDER(":( Texture at " << gameObject->GetTexture());
+        }
+        //スキンメッシュを使うか
+        GLint isSkinUniformLocation = glGetUniformLocation(shaderProgram, "isSkin");
+
+        //TODO:フラグをアニメーションがあるかどうかにする。
+        if (gameObject->GetJointMatrix().size() == 0) {
+            glUniform1i(isSkinUniformLocation,0);
+        }else {
+            glUniform1i(isSkinUniformLocation,1);
         }
         std::vector<glm::mat4> inverseBindMatrix = gameObject->GetJointMatrix();
         std::vector<glm::mat4> jointMatrix;
