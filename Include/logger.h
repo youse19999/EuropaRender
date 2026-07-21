@@ -9,7 +9,7 @@
 extern std::stringstream LOGGER_STREAM;
 extern std::stringstream LOGGER_RENDER;
 
-#define LOG(expression) LOGGER_STREAM << expression << '\n'
+#define LOG(expression) std::cout << expression << '\n'
 #define LOG_RENDER(expression) LOGGER_RENDER << expression << '\n'
 
 

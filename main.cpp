@@ -59,7 +59,19 @@ GameCamera* Load(tinygltf::Model model,int i,VirtualTexture* texture,GameWorld* 
     //実体作成
     GameCamera *gameObject = new GameCamera();
     gameObject->SetTexture(texture);
-    gameObject->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+    if(node.translation.size() > 2) {
+        gameObject->SetPosition(glm::vec3(node.translation[0],node.translation[1],node.translation[2]));
+    }else {
+        gameObject->SetPosition(glm::vec3(0,0,0));
+    }
+    if(node.scale.size() > 2) {
+        gameObject->SetScale(glm::vec3(node.scale[0],node.scale[1],node.scale[2]));
+    }else {
+        gameObject->SetScale(glm::vec3(1,1,1));
+    }
+    if(node.rotation.size() > 2) {
+        gameObject->SetRotation(glm::quat(node.rotation[0],node.scale[1],node.scale[2],node.scale[3]));
+    }
     gameObject->SetID(gameObjectLastOffset+i);
     gameObject->SetName(node.name);
     tinygltf::Animation *animation = nullptr;
